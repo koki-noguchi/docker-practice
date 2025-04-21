@@ -2,7 +2,7 @@ ARG GO_VERSION=1.24.2
 FROM golang:${GO_VERSION} AS base
 WORKDIR /src
 
-COPY go.mod ./
+COPY go.mod go.sum ./
 RUN go mod download
 
 FROM golang:${GO_VERSION} AS build
