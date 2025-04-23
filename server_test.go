@@ -2,17 +2,19 @@ package main
 
 import (
 	"github.com/gorilla/websocket"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
-	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 )
 
 func startTestServer() *httptest.Server {
-	server := httptest.NewServer(http.HandlerFunc(handleConnections))
+	e := echo.New()
+	e.GET("/ws", handleConnections)
+	ts := httptest.NewServer(e)
 	go handleMessages()
-	return server
+	return ts
 }
 
 func TestWebSocketEcho(t *testing.T) {

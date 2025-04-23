@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/labstack/echo/v4"
 	"log"
 	"net/http"
+	"sync"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -16,23 +17,27 @@ type Client struct {
 
 var clients = make(map[*Client]bool)
 var broadcast = make(chan []byte)
+var mu sync.Mutex
 
-func handleConnections(w http.ResponseWriter, r *http.Request) {
+func handleConnections(c echo.Context) error {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-	ws, err := upgrader.Upgrade(w, r, nil)
+	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		log.Fatal(err)
-		return
+		return err
 	}
+	defer ws.Close()
+
 	client := &Client{conn: ws, send: make(chan []byte, 256)}
+	mu.Lock()
 	clients[client] = true
+	mu.Unlock()
 
 	defer func() {
+		mu.Lock()
 		delete(clients, client)
-		err := ws.Close()
-		if err != nil {
-			return
-		}
+		mu.Unlock()
+		close(client.send)
 	}()
 
 	go func(c *Client) {
@@ -52,11 +57,13 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		}
 		broadcast <- message
 	}
+	return nil
 }
 
 func handleMessages() {
 	for {
 		message := <-broadcast
+		mu.Lock()
 		for client := range clients {
 			select {
 			case client.send <- message:
@@ -65,13 +72,6 @@ func handleMessages() {
 				delete(clients, client)
 			}
 		}
+		mu.Unlock()
 	}
-}
-
-func main() {
-	http.HandleFunc("/ws", handleConnections)
-	go handleMessages()
-
-	fmt.Println("Listening on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
 }
