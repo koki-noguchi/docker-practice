@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"github.com/gorilla/websocket"
@@ -19,7 +19,7 @@ var clients = make(map[*Client]bool)
 var broadcast = make(chan []byte)
 var mu sync.Mutex
 
-func handleConnections(c echo.Context) error {
+func HandleConnections(c echo.Context) error {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
@@ -60,7 +60,7 @@ func handleConnections(c echo.Context) error {
 	return nil
 }
 
-func handleMessages() {
+func HandleMessages() {
 	for {
 		message := <-broadcast
 		mu.Lock()

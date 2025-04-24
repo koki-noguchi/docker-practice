@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"github.com/gorilla/websocket"
@@ -11,9 +11,9 @@ import (
 
 func startTestServer() *httptest.Server {
 	e := echo.New()
-	e.GET("/ws", handleConnections)
+	e.GET("/ws", HandleConnections)
 	ts := httptest.NewServer(e)
-	go handleMessages()
+	go HandleMessages()
 	return ts
 }
 
